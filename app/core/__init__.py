@@ -8,7 +8,8 @@ CHECKPOINT_DB_URI = _settings.CHECKPOINT_DB_URI
 BOT_TOKEN = _settings.BOT_TOKEN
 GROUP_ID = _settings.GROUP_ID
 
-OLLAMA_MODEL = _settings.OLLAMA_MODEL
+OLLAMA_MODEL_A = _settings.OLLAMA_MODEL_A
+OLLAMA_MODEL_B = _settings.OLLAMA_MODEL_B
 EMBEDDING_MODEL = _settings.EMBEDDING_MODEL
 
 del _settings
@@ -19,7 +20,8 @@ __all__ = [
     "CHECKPOINT_DB_URI",
     "BOT_TOKEN",
     "GROUP_ID",
-    "OLLAMA_MODEL",
+    "OLLAMA_MODEL_A",
+    "OLLAMA_MODEL_B",
     "EMBEDDING_MODEL",
     "get_logger",
 ]

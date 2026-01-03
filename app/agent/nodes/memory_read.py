@@ -30,19 +30,18 @@ def memory_read(llm):
         try:
             response = await llm.ainvoke(planner_messages)
             raw_json = _extract_json(getattr(response, "content", "") or "")
-            # logger.debug(f"[memory_read] planner response JSON: {raw_json}")
+            # logger.debug(f"Planner response JSON: {raw_json}")
         except Exception as e:
-            logger.warning(f"[memory_read] planner failed: {e}")
+            logger.warning(f"Planner failed: {e}")
             raw_json = None
 
         # 4) Нормализуем запрос (режем лимиты, выкидываем неизвестные поля, fallback)
         req = normalize_memory_request(raw_json, catalog=catalog)
 
-        logger.debug(f"[memory_read] memory request: {req}")
+        # logger.debug(f"Memory request: {req}")
 
         # 5) Достаём память (SQL-фильтры -> candidates -> rerank embeddings)
         core_facts = await get_core_for_context(
-            need_core=req["need_core"],
             core_limit=50,
         )
 
@@ -58,7 +57,7 @@ def memory_read(llm):
             candidate_limit=300,
         )
 
-        logger.debug(f"Memory counts: core={len(core_facts)} ext={len(extended_facts)} epi={len(episodic_facts)}")
+        logger.info(f"Memory counts: core={len(core_facts)} ext={len(extended_facts)} epi={len(episodic_facts)}")
 
         # 6) Возвращаем в state. messages не трогаем.
         return {

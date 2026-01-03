@@ -206,7 +206,7 @@ async def select_core_facts_repo(
             MemoryFacts.last_seen_at,
         )
         .where(MemoryFacts.tier == "core")
-        .order_by(MemoryFacts.last_seen_at.desc())
+        .order_by(MemoryFacts.confidence.desc())
         .limit(limit)
     )
 

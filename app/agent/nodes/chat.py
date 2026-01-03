@@ -10,8 +10,6 @@ logger = get_logger(__name__)
 
 def chat(llm_tools):
     async def chat_node(state: State) -> dict:
-        logger.debug(f"State: {state}")
-        
         messages = build_messages(
             state.get("messages", []),
             core_facts=state.get("core_facts", []),

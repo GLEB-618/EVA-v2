@@ -10,6 +10,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 RESET = "\033[0m"
 COLOR_TIME = "\033[90m"     # серый
 COLOR_NAME = "\033[36m"     # циан
+COLOR_FUNC = "\x1b[38;5;208m"  # оранжевый
 LEVEL_COLORS = {
     "DEBUG":    "\033[37m",
     "INFO":     "\033[32m",
@@ -23,8 +24,12 @@ class ColorFormatter(logging.Formatter):
         asctime = f"{COLOR_TIME}{self.formatTime(record, self.datefmt)}{RESET}"
         level = f"{LEVEL_COLORS.get(record.levelname, '')}{record.levelname}{RESET}"
         name = f"{COLOR_NAME}[{record.name}]{RESET}"
+
+        # добавляем место вызова
+        where = f"{COLOR_FUNC}[{record.funcName}]{RESET}"
+
         msg = record.getMessage()
-        return f"{asctime} {level}: {name} {msg}"
+        return f"{asctime} {level}: {name} {where}: {msg}"
 
 def get_logger(name: str, filename: str = "logs.log") -> logging.Logger:
     logger = logging.getLogger(name)
@@ -33,7 +38,7 @@ def get_logger(name: str, filename: str = "logs.log") -> logging.Logger:
     if not logger.handlers:
         # файл без цветов
         file_formatter = logging.Formatter(
-            "%(asctime)s %(levelname)s: [%(name)s] %(message)s",
+            "%(asctime)s %(levelname)s: [%(name)s] %(funcName)s: %(message)s",
             "%d/%m/%Y %H:%M:%S"
         )
         file_handler = logging.FileHandler(LOG_DIR / filename, encoding="utf-8")

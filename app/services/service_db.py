@@ -88,7 +88,6 @@ def normalize_memory_request(
     - гарантирует наличие всех полей
     """
     out = {
-        "need_core": True,
         "extended": {
             "need": False,
             "k": 0,
@@ -113,9 +112,6 @@ def normalize_memory_request(
 
     if not isinstance(data, dict):
         return out
-
-    # need_core
-    out["need_core"] = _safe_bool(data.get("need_core"), out["need_core"])
 
     # extended
     ext = data.get("extended")
@@ -235,11 +231,8 @@ async def hybrid_rank_episodic(
 
 async def get_core_for_context(
     *,
-    need_core: bool,
     core_limit: int = 50,
 ) -> list[dict[str, Any]]:
-    if not need_core:
-        return []
     async with session_factory() as session:
         return await select_core_facts_repo(session, limit=core_limit)
 
