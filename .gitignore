@@ -2,3 +2,5 @@
 __pycache__/
 logs/
 image.png
+graph.png
+app/db/init_db.py

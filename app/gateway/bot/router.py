@@ -11,14 +11,20 @@ logger = get_logger(__name__)
 
 
 @router.message()
-async def handle_message(message: Message, graph_app):
-    logger.info(f"Received message from {message.chat.id}: {message.text}")
+async def handle_message(msg: Message, graph_app):
+    if msg.text is None:
+        return
+    text = msg.text.strip()
+    if msg.message_thread_id is None:
+        await msg.reply("Пожалуйста, используйте темы для общения с ботом в группах.")
+        return
+    thread_id = msg.message_thread_id
 
-    text = message.text or ""
+    logger.info(f"Received message in thread {thread_id}: {text}")
 
     out = await graph_app.ainvoke(
         {"messages": [HumanMessage(content=text)]},
-        config={"configurable": {"thread_id": f"tg:{message.chat.id}"}},
+        config={"configurable": {"thread_id": f"tg:{thread_id}"}},
     )
 
-    await message.answer(out["messages"][-1].content)
+    await msg.answer(out["messages"][-1].content)
