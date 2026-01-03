@@ -10,28 +10,114 @@ SYSTEM_BASE = """Ты — ассистент. Отвечай по делу, бе
 Если тебе не хватает данных — прямо скажи, что именно нужно уточнить.
 Не выдумывай факты и результаты инструментов."""
 
+MEMORY_PLANNER_SYSTEM = """Ты — Memory Planner. Твоя задача: по сообщению пользователя решить, какие данные нужно ДОСТАТЬ из памяти перед ответом.
 
-MEMORY_EXTRACT_SYSTEM = """Ты — модуль записи памяти ассистента.
+Входные данные:
+1) MEMORY_CATALOG — каталог того, что вообще есть в памяти (subjects, predicates_top, event_types, counts, date_range).
+2) USER_MESSAGE — текущее сообщение пользователя.
 
-По истории диалога выдели факты, которые стоит сохранить в память.
+Выход:
+- Верни СТРОГО один валидный JSON-объект и НИЧЕГО больше (без текста, без пояснений, без markdown).
+- Используй только те значения subject/predicate/event_type, которые есть в MEMORY_CATALOG.
+- Не запрашивай слишком много: extended.k <= 30, episodic.k <= 15.
+- Core факты обычно маленькие — чаще ставь need_core=true, но если они точно не нужны, можешь need_core=false.
+- Episodic проси только если важен контекст/история/ошибки/предыдущие решения.
 
-Сохраняй:
-- устойчивые факты о пользователе (предпочтения, навыки, проекты, цели)
-- важные решения/события (что-то, что пригодится позже)
+JSON-схема (строго эти поля):
+{
+  "need_core": boolean,
+  "extended": {
+    "need": boolean,
+    "k": integer,
+    "subjects": string[],
+    "predicates": string[],
+    "min_confidence": number|null,
+    "prefer_recent": boolean
+  },
+  "episodic": {
+    "need": boolean,
+    "k": integer,
+    "event_types": string[],
+    "since_days": integer|null,
+    "min_importance": number|null,
+    "prefer_recent": boolean
+  }
+}
 
-Не сохраняй:
-- болтовню, приветствия, одноразовые фразы
-- догадки и предположения"""
+Правила заполнения:
+- Если extended.need=false → всё равно верни extended объект, но оставь списки пустыми и k=0.
+- Если episodic.need=false → аналогично: списки пустые и k=0.
+- Если пользователь спрашивает “вспомни/ты помнишь/раньше/что мы решили” → episodic.need=true.
+- Если вопрос про настройки/предпочтения/железо/проекты → extended.need=true и укажи нужные predicates/subjects.
+- prefer_recent=true, если важна актуальность/последнее состояние."""
+
+MEMORY_WRITE_SYSTEM = """Ты — Memory Writer (сохранение памяти).
+Твоя задача: по последнему сообщению пользователя и последнему ответу ассистента выделить, что стоит сохранить в долговременной памяти.
+
+Правила:
+- Сохраняй ТОЛЬКО устойчивые факты (предпочтения, железо/софт, проекты, договорённости) и важные эпизоды (решение/вывод/ошибка/важное событие).
+- Не сохраняй приветствия, болтовню, одноразовые детали.
+- Facts: максимум 5.
+- Episodic: максимум 2.
+- Верни СТРОГО один валидный JSON-объект. Если ты решаешь что-то не сохранить, то объясни причину.
+
+Схема JSON:
+{
+  "facts": [
+    {
+      "tier": "core" | "extended",
+      "subject": "строка",
+      "predicate": "строка",
+      "value": "строка",
+      "confidence": number|null
+    }
+  ],
+  "episodic": [
+    {
+      "event_type": "строка",
+      "summary": "коротко (1-2 предложения)",
+      "content": "подробности/контекст",
+      "importance": number
+    }
+  ]
+}
+
+Подсказки:
+- tier="core" только для очень стабильных личных фактов пользователя (редко).
+- tier="extended" для настроек/железа/предпочтений/проектов.
+- importance в диапазоне 0..1 (0.7+ только если реально важно).
+- subject="Пользователь", если факт про пользователя. Подставляй туда конкретные имена, если это напрямую упоминается.
+- Предпочтения стиля общения (тон, род, язык, формат ответов) — сохранять как core."""
 
 
-def _fmt_facts(title: str, facts: list, limit: int = 20) -> str:
+def _fmt_facts(title: str, facts: list) -> str:
     if not facts:
         return f"[{title}]\n- (empty)\n"
-    lines = [f"- {f['value']}" if isinstance(f, dict) else f"- {str(f)}"
-             for f in facts[:limit]]
+
+    lines = []
+    for f in facts:
+        if isinstance(f, dict):
+            if "value" in f:
+                # facts
+                sub = f.get("subject")
+                if sub:
+                    lines.append(f"- {sub}:")
+                pred = f.get("predicate")
+                if pred:
+                    lines.append(f"  - {pred}: {f['value']}")
+                else:
+                    lines.append(f"  - {f['value']}")
+            elif "summary" in f:
+                # episodic
+                lines.append(f"- {f['summary']}")
+            else:
+                lines.append(f"- {str(f)}")
+        else:
+            lines.append(f"- {str(f)}")
+
     return f"[{title}]\n" + "\n".join(lines) + "\n"
 
-def build_messages(messages: Sequence[BaseMessage], core_facts = None, extended_facts = None, episodic_facts = None) -> List[BaseMessage]:
+def build_messages(messages: list[BaseMessage], core_facts = None, extended_facts = None, episodic_facts = None) -> List[BaseMessage]:
     core_facts = core_facts or []
     extended_facts = extended_facts or []
     episodic_facts = episodic_facts or []
@@ -45,49 +131,24 @@ def build_messages(messages: Sequence[BaseMessage], core_facts = None, extended_
         + _fmt_facts("EPISODIC", episodic_facts)
     )
 
-    # logger.debug("Built memory block:\n" + memory_block)
-
-    msgs = list(messages)
+    logger.debug("Built memory block:\n" + memory_block)
 
     return [
         SystemMessage(content=SYSTEM_BASE),
         SystemMessage(content=memory_block),
-        *msgs
+        *messages
     ]
 
-def build_memory_extraction_messages(messages: Sequence[BaseMessage], core_facts = None, extended_facts = None, episodic_facts = None) -> List[BaseMessage]:
-    core_facts = core_facts or []
-    extended_facts = extended_facts or []
-    episodic_facts = episodic_facts or []
-
-    memory_block = (
-        "Это уже известные тебе факты из памяти агента. НЕ ДОБАВЛЯЙ их снова.\n"
-        + _fmt_facts("CORE", core_facts)
-        + _fmt_facts("EXTENDED", extended_facts)
-        + _fmt_facts("EPISODIC", episodic_facts)
-    )
-
-    msgs = list(messages)
-
+def build_memory_request_messages(user_message: str, catalog: Dict[str, Any]) -> List:
+    logger.debug(f"Building memory request messages with user_message: {user_message} and catalog: {catalog}")
     return [
-        SystemMessage(content=MEMORY_EXTRACT_SYSTEM),
-        *msgs,
-        HumanMessage(content=(
-            "Выдели из истории диалога факты для сохранения в память агента.\n" +
-            memory_block +
-            "\nВерни СТРОГО JSON без текста вокруг в формате:\n"
-            '{"facts":[{"scope":"core|extended|episodic","value":"...","importance":0.0}]}\n'
-            "Если нечего сохранять: {\"facts\":[]}"
-        ))
+        SystemMessage(content=MEMORY_PLANNER_SYSTEM),
+        HumanMessage(content=f"MEMORY_CATALOG:\n{catalog}\n\nUSER_MESSAGE:\n{user_message}"),
     ]
 
-    # return [
-    #     SystemMessage(content=MEMORY_EXTRACT_SYSTEM),
-    #     SystemMessage(content=memory_block),
-    #     *msgs,
-    #     HumanMessage(content=(
-    #         "Верни СТРОГО JSON без текста вокруг в формате:\n"
-    #         '{"facts":[{"scope":"core|extended|episodic","value":"...","importance":0.0}]}\n'
-    #         "Если нечего сохранять: {\"facts\":[]}"
-    #     ))
-    # ]
+def build_memory_write_messages(user_text: str, ai_text: str) -> List:
+    logger.debug(f"Building memory write messages with user_text: {user_text} and ai_text: {ai_text}")
+    return [
+        SystemMessage(content=MEMORY_WRITE_SYSTEM),
+        HumanMessage(content=f"USER_MESSAGE:\n{user_text}\n\nASSISTANT_ANSWER:\n{ai_text}"),
+    ]

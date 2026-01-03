@@ -31,18 +31,11 @@ def get_embedding_model() -> EmbeddingModel:
     Единая точка создания embedding-модели.
     """
     model = EMBEDDING_MODEL
+    metricks = {
+        "model": EMBEDDING_MODEL,
+    }
+    logger.info(f"Using embedding model: {metricks}")
 
     return EmbeddingModel(
         model_name=model,
     )
-
-def describe_embedding() -> dict:
-    """
-    Просто чтобы логировать, что за модель/настройки используются.
-    """
-    llm = get_embedding_model()
-    metricks = {
-        "model": getattr(llm, "model_name", None),
-    }
-    logger.info(f"Using embedding model: {metricks}")
-    return metricks
