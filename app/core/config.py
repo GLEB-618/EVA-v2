@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     GROUP_ID: int
     
-    OLLAMA_MODEL_A: str
-    OLLAMA_MODEL_B: str
+    OLLAMA_MODEL_FASTER_COLD: str
+    OLLAMA_MODEL_COLD: str
+    OLLAMA_MODEL_WARM: str
     EMBEDDING_MODEL: str
 
     LOG_LEVEL: str = "INFO"

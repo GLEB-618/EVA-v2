@@ -1,22 +1,22 @@
 from functools import lru_cache
 from typing import Literal
 from langchain_ollama import ChatOllama
-from app.core import OLLAMA_MODEL_A, OLLAMA_MODEL_B, get_logger
+from app.core import OLLAMA_MODEL_FASTER_COLD, OLLAMA_MODEL_COLD, OLLAMA_MODEL_WARM, get_logger
 
 logger = get_logger(__name__)
 
-Profile = Literal["cold", "warm"]
+Profile = Literal["faster_cold", "cold", "warm"]
 
 
-def _profile_params(profile: Profile) -> dict:
-    """
-    Единые профили поведения модели под агента.
-    Важно: температуру задаём ТОЛЬКО при создании ChatOllama.
-    """
-    if profile == "cold":
-        return {"temperature": 0.15}
-    elif profile == "warm":
-        return {"temperature": 0.6}
+# def _profile_params(profile: Profile) -> dict:
+#     """
+#     Единые профили поведения модели под агента.
+#     Важно: температуру задаём ТОЛЬКО при создании ChatOllama.
+#     """
+#     if profile == "cold":
+#         return {"temperature": 0.15}
+#     elif profile == "warm":
+#         return {"temperature": 0.6}
 
 
 @lru_cache(maxsize=16)
@@ -26,9 +26,11 @@ def get_chat_model(profile: Profile = "cold", num_ctx: int | None = None) -> Cha
     Кэш теперь на (profile, num_ctx), а не один инстанс на всё.
     """
     if profile == "cold":
-        model = OLLAMA_MODEL_A
+        model = OLLAMA_MODEL_COLD
+    elif profile == "faster_cold":
+        model = OLLAMA_MODEL_FASTER_COLD
     else:
-        model = OLLAMA_MODEL_B
+        model = OLLAMA_MODEL_WARM
     # params = _profile_params(profile)
 
     # Если хочешь явно контролировать контекст (часто полезно для агента)

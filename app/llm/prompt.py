@@ -6,7 +6,7 @@ from app.core import get_logger
 logger = get_logger(__name__)
 
 
-SYSTEM_BASE = """Ты — ассистент. Отвечай по делу, без лишней воды.
+SYSTEM_BASE = """Ты — ассистент. Отвечай по делу, без лишней воды. Не используй Markdown.
 Если тебе не хватает данных — прямо скажи, что именно нужно уточнить.
 Не выдумывай факты и результаты инструментов."""
 
@@ -146,7 +146,7 @@ def build_memory_write_messages(user_text: str, ai_text: str, core_facts = None,
     core_facts = core_facts or []
     extended_facts = extended_facts or []
     episodic_facts = episodic_facts or []
-    logger.debug(f"Building memory write messages with user_text: {user_text} and ai_text: {ai_text}")
+    # logger.debug(f"Building memory write messages with user_text: {user_text} and ai_text: {ai_text}")
     memory_block = (
         "ПАМЯТЬ (служебный контекст, только для использования внутри)\n"
         "Правила: для понимания, что уже известно.\n\n"

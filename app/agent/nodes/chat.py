@@ -19,7 +19,6 @@ def chat(llm_tools):
 
         ai_msg = await llm_tools.ainvoke(messages)
 
-        # logger.debug(ai_msg)
         logger.info(f"Content: {getattr(ai_msg, 'content', None)}")
         logger.info(f"Tool calls: {getattr(ai_msg, 'tool_calls', None)}")
 

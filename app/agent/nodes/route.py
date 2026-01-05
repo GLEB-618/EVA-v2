@@ -12,7 +12,11 @@ def route(llm_tools):
     async def route_node(state: State) -> dict:
         user_message = ""
         try:
-            user_message = str(state.get("messages", [])[-1].content)
+            messages = state.get("messages", [])[-1]
+            if type(messages.content) == str:
+                user_message = str(messages.content)
+            elif type(messages.content) == list:
+                return {"route_to": "tools"}
         except Exception:
             user_message = ""
 

@@ -10,7 +10,7 @@ from app.agent.state import State
 from app.core import get_logger
 from app.db.session import session_factory
 from app.llm.prompt import build_memory_write_messages
-from app.services.service import _extract_json
+from app.services.utils import _extract_json
 from app.services.service_db import add_memory_fact, add_episodic_memory
 
 logger = get_logger(__name__)

@@ -1,6 +1,6 @@
 from app.agent.state import State
 from app.llm.prompt import build_memory_request_messages
-from app.services.service import _extract_json
+from app.services.utils import _extract_json
 from app.services.service_db import build_memory_catalog, get_core_for_context, get_episodic_for_context, get_extended_for_context, normalize_memory_request
 
 from app.core import get_logger

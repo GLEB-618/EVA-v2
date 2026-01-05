@@ -18,15 +18,19 @@ logger = get_logger(__name__)
 def build_graph(checkpointer=None):
     tools = [now]
 
+    llm_faster_cold = get_chat_model(profile="faster_cold")
+    llm_faster_cold_tools = llm_faster_cold.bind_tools(tools)
+
     llm_cold = get_chat_model(profile="cold")
     llm_cold_tools = llm_cold.bind_tools(tools)
+
     llm_warm = get_chat_model(profile="warm")
 
     tool_node = ToolNode(tools)
 
     builder = StateGraph(State)
 
-    builder.add_node("route", route(llm_cold_tools))
+    builder.add_node("route", route(llm_faster_cold_tools))
     builder.add_node("memory_read", memory_read(llm_cold))
     builder.add_node("chat", chat(llm_warm))
     builder.add_node("chat_tools", chat(llm_cold_tools))
